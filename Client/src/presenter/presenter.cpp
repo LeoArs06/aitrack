@@ -252,7 +252,11 @@ void Presenter::run_loop()
 
 			if (state.hybrid_mode && imu_worker) {
 				hybrid::OpticalPose pose;
-				pose.valid = d.face_detected && d.pose_valid;
+				// AITrack clips yaw/pitch to +-90 and roll to [0,180]: a clipped
+				// value is not a measurement, so it must not pull the fusion.
+				pose.valid = d.face_detected && d.pose_valid
+					&& std::abs(state.yaw) < 90.0 && std::abs(state.pitch) < 90.0
+					&& state.roll > 0.0 && state.roll < 180.0;
 				if (pose.valid) {
 					pose.yaw = state.yaw; pose.pitch = state.pitch; pose.roll = state.roll;
 					pose.x = state.x; pose.y = state.y; pose.z = state.z;

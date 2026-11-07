@@ -264,8 +264,8 @@ void StandardTracker::proc_heatmaps(float* heatmaps, int x0, int y0, float scale
         // float conf = heatmaps[offset + argmax]; unreferenced local variable
         float res = 223;
 
-        float off_x = res * logit(heatmaps[66 * heatmap_size + offset + argmax]) + 0.1f;
-        float off_y = res * logit(heatmaps[2 * 66 * heatmap_size + offset + argmax]) + 0.1f;
+        float off_x = res * logit(heatmaps[66 * heatmap_size + offset + argmax]);
+        float off_y = res * logit(heatmaps[2 * 66 * heatmap_size + offset + argmax]);
 
 
         float lm_x = (float)y0 + (float)(scale_x * (res * (float(x) / 27.0f) + off_x));

@@ -59,14 +59,26 @@ void protocolTests() {
     CHECK(p.feed(garbage).size()==1);
 }
 void mathTests() {
-    for(double yaw:{-179.0,-90.0,-30.0,0.0,80.0,179.0}) for(double pitch:{-89.9,-60.0,-1.0,0.0,45.0,89.9})
-        for(double roll:{-179.0,-75.0,0.0,25.0,150.0}) {
+    for(double pitch:{-179.0,-90.0,-30.0,0.0,80.0,179.0}) for(double yaw:{-89.9,-60.0,-1.0,0.0,45.0,89.9})
+        for(double roll:{-179.0,-75.0,0.0,25.0,90.0,150.0}) {
             auto q=poseQuaternion(yaw,pitch,roll);auto p=quaternionPose(q);
             near(p.yaw,yaw,1e-9);near(p.pitch,pitch,1e-9);near(p.roll,roll,1e-9);
             near(angularDistance(q,poseQuaternion(p.yaw,p.pitch,p.roll)),0,1e-11);
             near(angularDistance(q,Quat::fromMatrix(q.matrix())),0,1e-12);
         }
-    for(double pitch:{-90.0,90.0}) { auto q=poseQuaternion(46,pitch,-37);auto p=quaternionPose(q);near(angularDistance(q,poseQuaternion(p.yaw,p.pitch,p.roll)),0,1e-7); }
+    for(double yaw:{-90.0,90.0}) { auto q=poseQuaternion(yaw,46,-37);auto p=quaternionPose(q);near(angularDistance(q,poseQuaternion(p.yaw,p.pitch,p.roll)),0,1e-7); }
+    {   // Independent reference built from explicit elementary matrices (AITrack order).
+        auto mul=[](const double a[3][3],const double b[3][3],double o[3][3]){for(int i=0;i<3;i++)for(int j=0;j<3;j++){o[i][j]=0;for(int k=0;k<3;k++)o[i][j]+=a[i][k]*b[k][j];}};
+        for(double yaw:{-70.0,-20.0,0.0,35.0,80.0}) for(double pitch:{-150.0,-40.0,0.0,25.0,170.0}) for(double roll:{-120.0,0.0,60.0,90.0,175.0}) {
+            double a=pitch*radians,b=yaw*radians,c=roll*radians;
+            double X[3][3]={{1,0,0},{0,std::cos(a),-std::sin(a)},{0,std::sin(a),std::cos(a)}};
+            double Y[3][3]={{std::cos(b),0,std::sin(b)},{0,1,0},{-std::sin(b),0,std::cos(b)}};
+            double Z[3][3]={{std::cos(c),-std::sin(c),0},{std::sin(c),std::cos(c),0},{0,0,1}};
+            double ZY[3][3],R[3][3]; mul(Z,Y,ZY); mul(ZY,X,R);
+            auto m=poseQuaternion(yaw,pitch,roll).matrix();
+            for(int i=0;i<3;i++)for(int j=0;j<3;j++) near(m.m[i][j],R[i][j],1e-12);
+        }
+    }
     for(Vec3 v:{Vec3{},Vec3{1e-12,-2e-12,3e-12},Vec3{0.3,-0.5,1.2},Vec3{pi,0,0}}) near((Quat::exp(v).log()-v).norm(),0,1e-12);
     Quat a=Quat::exp({0.3,0.1,-0.7}),b=Quat::exp({-0.8,0.4,0.3});
     near(angularDistance(a,Quat::slerp(a,b,0.5)),angularDistance(a,b)*0.5,1e-12);

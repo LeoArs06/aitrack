@@ -209,14 +209,6 @@ void PositionSolver::solve_rotation(FaceData* face_data)
     }
 
     face_data->pose_valid = true;
-    if (!this->complex)
-    {
-        for (int i = 0; i < 3; i++)
-        {
-            rv[i] = rvec.at<double>(i, 0);
-            tv[i] = tvec.at<double>(i, 0);
-        }
-    }
 
     get_euler(rvec, tvec);
 
