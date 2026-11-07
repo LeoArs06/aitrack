@@ -1,6 +1,8 @@
 #include "Calibration.h"
 #include <algorithm>
 #include <array>
+#include <cstdio>
+#include <cstdlib>
 #include <iomanip>
 #include <limits>
 #include <locale>
@@ -55,24 +57,30 @@ bool CalibrationResult::deserialize(const std::string& text,CalibrationResult& r
 void Calibration::begin(int64_t t) { *this=Calibration{}; start_=t; phase_=Phase::Still; }
 bool Calibration::fail(const std::string& reason) { reason_=reason; phase_=Phase::Failed; return false; }
 bool Calibration::endStill() {
-    if(stillCount_<200) return fail("Too few IMU samples during the 2 s still phase");
-    double n=double(stillCount_); Vec3 w=sumW_/n,a=sumA_/n;
-    Vec3 vw=sumW2_/n-square(w),va=sumA2_/n-square(a);
-    double wg=std::sqrt(std::max(0.0,vw.x+vw.y+vw.z)),ag=std::sqrt(std::max(0.0,va.x+va.y+va.z));
-    if(w.norm()>3*radians || wg>0.8*radians || ag>0.20 || std::abs(a.norm()-9.80665)>0.8)
-        return fail("Movement or invalid gravity during still phase; hold still and retry");
-    result_.bias=w; phase_=Phase::Motion; return true;
+    if(still_.size()<200) return fail("Too few IMU samples during the 2 s still phase");
+    // A worn headset is never bench-still (breathing, pulse). Accept gentle
+    // sway here; finish() removes the head motion seen by the camera.
+    Vec3 w,w2,a,a2; double n=double(still_.size());
+    for(auto& v:still_) { w+=v.w; w2+=square(v.w); a+=v.a; a2+=square(v.a); }
+    w=w/n; a=a/n; Vec3 vw=w2/n-square(w),va=a2/n-square(a);
+    double sw=std::sqrt(std::max(0.0,vw.x+vw.y+vw.z)),sa=std::sqrt(std::max(0.0,va.x+va.y+va.z));
+    if(w.norm()>10*radians || sw>4*radians || sa>1.0 || std::abs(a.norm()-9.80665)>1.0) {
+        char m[200]; std::snprintf(m,sizeof m,"Too much movement while holding still (gyro %.1f dps, spread %.1f dps, accel %.2f g); hold still and retry",
+            w.norm()*degrees,sw*degrees,a.norm()/9.80665);
+        return fail(m);
+    }
+    result_.bias=w; stillSpread_=sw; phase_=Phase::Motion; return true;
 }
 void Calibration::addImuSample(int64_t t,const SampleSI& s) {
     if(phase_!=Phase::Still && phase_!=Phase::Motion) return;
     if(!s.gyro.finite() || !s.accel.finite() || (s.flags&7) || s.discontinuity) { fail("Invalid, saturated or restarted IMU during calibration"); return; }
     if(!gyro_.empty() && t<=gyro_.back().t) return;
     if(phase_==Phase::Still && t-start_>=2000000 && !endStill()) return;
-    if(phase_==Phase::Still) { sumW_+=s.gyro; sumW2_+=square(s.gyro); sumA_+=s.accel; sumA2_+=square(s.accel); ++stillCount_; }
+    if(phase_==Phase::Still) still_.push_back({s.gyro,s.accel});
     gyro_.push_back({t,s.gyro});
 }
 void Calibration::addOptical(int64_t t,const OpticalPose& p) {
-    if(phase_!=Phase::Motion || !p.valid || !std::isfinite(p.yaw) || !std::isfinite(p.pitch) || !std::isfinite(p.roll)) return;
+    if((phase_!=Phase::Still && phase_!=Phase::Motion) || !p.valid || !std::isfinite(p.yaw) || !std::isfinite(p.pitch) || !std::isfinite(p.roll)) return;
     if(!optical_.empty() && t<=optical_.back().t) return;
     optical_.push_back({t,poseQuaternion(p.yaw,p.pitch,p.roll)});
 }
@@ -87,6 +95,26 @@ bool Calibration::meanGyro(int64_t a,int64_t b,Vec3& w) const {
         integral+=(vl+vh)*(0.5*double(hi-lo)); ++i;
     }
     w=integral/double(b-a)-result_.bias; return true;
+}
+// Head rotation during the still prompt is not gyro bias. When the user
+// swayed, re-estimate the bias over the whole session: sum per-frame
+// (gyro - head rate in IMU axes) over delay-matched intervals. Per-frame
+// camera noise telescopes away, leaving only the endpoints over ~12 s.
+void Calibration::stillBiasCorrection(Quat imuToHead,int delayMs) {
+    // Bench-still: the gyro mean is far more precise than the camera.
+    if(stillSpread_<0.3*radians) return;
+    const int64_t d=int64_t(delayMs)*1000;
+    Vec3 sum; double span=0;
+    for(size_t i=1;i<optical_.size();++i) {
+        auto a=optical_[i-1],b=optical_[i];
+        if(a.t<start_+d || b.t-a.t>100000) continue;
+        Vec3 w; if(!meanGyro(a.t-d,b.t-d,w)) continue; // w = raw - provisional bias
+        double dt=double(b.t-a.t)*1e-6;
+        sum+=w*dt-imuToHead.conj().rotate((a.q.conj()*b.q).log()); span+=dt;
+    }
+    if(span<6) return;
+    Vec3 correction=sum/span;
+    if(correction.norm()<5*radians) result_.bias+=correction;
 }
 bool Calibration::finish() {
     if(phase_!=Phase::Motion) return false;
@@ -115,7 +143,8 @@ bool Calibration::finish() {
     std::vector<Vec3> a,b;
     for(auto r:rates) { Vec3 w; if(meanGyro(r.a-delay*1000,r.b-delay*1000,w)) { a.push_back(w); b.push_back(r.w); } }
     if(a.size()<100) return fail("Insufficient aligned motion samples");
-    Quat rotation=align(a,b); double residual=0,energy=0,cov[3][3]={}; Vec3 rms;
+    Quat rotation=align(a,b);
+    double residual=0,energy=0,cov[3][3]={}; Vec3 rms;
     for(size_t i=0;i<a.size();++i) {
         Vec3 e=rotation.rotate(a[i])-b[i]; residual+=e.dot(e);energy+=b[i].dot(b[i]);rms+=square(b[i]);
         for(int j=0;j<3;++j) for(int k=0;k<3;++k) cov[j][k]+=b[i][j]*b[i][k]/a.size();
@@ -125,6 +154,7 @@ bool Calibration::finish() {
     if(minExcitation<6*radians) return fail("Insufficient excitation: move left-right, up-down AND tilt");
     double relative=std::sqrt(residual/std::max(1e-12,energy));
     if(relative>0.30) return fail("Alignment residual too high; check rigid mounting and optical tracking");
+    stillBiasCorrection(rotation,delay);
     result_.imuToHead=rotation;result_.latencyMs=delay;result_.quality=std::clamp(best*(1-relative),0.0,1.0);
     result_.residualDegPerSec=std::sqrt(residual/a.size())*degrees;
     rms=rms/double(a.size()); result_.excitationDegPerSec={std::sqrt(rms.x)*degrees,std::sqrt(rms.y)*degrees,std::sqrt(rms.z)*degrees};

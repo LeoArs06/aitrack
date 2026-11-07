@@ -144,6 +144,19 @@ void calibrationTests() {
     Calibration moving;moving.begin(0);
     for(int k=0;k<=400;++k) { SampleSI s;s.gyro={0,0,(k%2?8:-8)*radians};s.accel={0,9.80665,0};moving.addImuSample(k*5000LL,s); }
     CHECK(moving.phase()==Calibration::Phase::Failed);CHECK(!moving.reason().empty());
+    // Worn headset: breathing/pulse tremor (~0.9 dps RMS) on top of a 2 dps bias must pass.
+    Calibration worn;worn.begin(0);Vec3 wornBias{2*radians,-0.7*radians,1.0*radians};
+    for(int k=0;k<=420;++k) { double t=k*0.005;SampleSI s;
+        s.gyro=wornBias+Vec3{1.1*std::sin(2*3.14159265*0.3*t),0.6*std::sin(2*3.14159265*1.1*t),0.5*std::cos(2*3.14159265*0.7*t)}*radians;
+        s.accel={0,9.80665,0};worn.addImuSample(k*5000LL,s); }
+    if(worn.phase()!=Calibration::Phase::Motion) throw Failure("Worn still phase: "+worn.reason());
+    auto biased=c;biased.bias={1.9*radians,-1.2*radians,0.8*radians};biased.seed+=11;
+    Calibration big;runCalibration(big,Simulator(biased));if(!big.finish()) throw Failure("Large-bias calibration: "+big.reason());
+    CHECK((big.result().bias-biased.bias).norm()*degrees<0.05);
+    auto swaying=c;swaying.swayDeg=1.0;swaying.bias=biased.bias;swaying.seed+=23;
+    Calibration sway;runCalibration(sway,Simulator(swaying));if(!sway.finish()) throw Failure("Sway calibration: "+sway.reason());
+    double swayBias=(sway.result().bias-swaying.bias).norm()*degrees;metric("Bias error with 1 deg sway",swayBias,"deg/s");
+    CHECK(swayBias<0.25);CHECK(angularDistance(sway.result().imuToHead,swaying.mounting)*degrees<1);
     c.motion=Simulator::Motion::SlowRamp;c.outliers=false;Simulator deficient(c);Calibration poor;runCalibration(poor,deficient);
     CHECK(!poor.finish());CHECK(poor.phase()==Calibration::Phase::Failed);CHECK(!poor.reason().empty());
 }

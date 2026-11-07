@@ -12,6 +12,7 @@ public:
         double durationSec=24,imuHz=200,opticalHz=30,latencyMs=60;
         double opticalNoiseDeg=0.65,translationNoiseCm=0.10,gyroNoiseDegPerSec=0.08;
         double biasWalkDegPerSqrtSec=0.003,accelNoise=0.025;
+        double swayDeg=0; // breathing-like head sway, present also during the still prompt
         double clockDriftPpm=80,usbJitterUs=900,opticalJitterUs=600;
         uint64_t mcuOffsetUs=4294000000ULL;
         int64_t hostOffsetUs=10000000;

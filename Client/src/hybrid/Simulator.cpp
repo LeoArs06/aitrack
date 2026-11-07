@@ -30,9 +30,10 @@ Quat Simulator::orientation(double seconds) const {
     double fade=1-std::exp(-t*t/0.15);
     if(config_.motion==Motion::MicroMovement) return poseQuaternion(0.2*std::sin(2*pi*t)*fade,0,0);
     if(config_.motion==Motion::SlowRamp) return poseQuaternion(2*t,0,0);
+    double sw=config_.swayDeg,sy=sw*std::sin(2*pi*0.3*seconds),sp=0.6*sw*std::sin(2*pi*0.23*seconds+1);
     if(config_.motion==Motion::Calibration)
-        return poseQuaternion(fade*(32*std::sin(1.6*t)+14*std::sin(4.3*t)),
-            fade*(23*std::sin(2.1*t)+9*std::sin(5.1*t)),fade*(19*std::sin(2.7*t)+8*std::sin(5.7*t)));
+        return poseQuaternion(sy+fade*(32*std::sin(1.6*t)+14*std::sin(4.3*t)),
+            sp+fade*(23*std::sin(2.1*t)+9*std::sin(5.1*t)),fade*(19*std::sin(2.7*t)+8*std::sin(5.7*t)));
     double burst=std::exp(-std::pow((t-5)/0.65,2))+std::exp(-std::pow((t-17)/0.65,2));
     return poseQuaternion(fade*(19*std::sin(0.7*t)+14*std::sin(1.9*t)+32*std::sin(7*t)*burst)+0.3*t,
         fade*(12*std::sin(1.3*t)+6*std::sin(3.1*t)),fade*(9*std::sin(1.7*t)+4*std::sin(3.9*t)));

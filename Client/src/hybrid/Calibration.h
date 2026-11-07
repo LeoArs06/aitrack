@@ -30,12 +30,14 @@ private:
     int64_t start_=0;
     std::vector<Gyro> gyro_;
     std::vector<Opt> optical_;
-    Vec3 sumW_,sumW2_,sumA_,sumA2_;
-    size_t stillCount_=0;
+    struct Still { Vec3 w,a; };
+    std::vector<Still> still_;
+    double stillSpread_=0; // gyro spread during the still prompt (rad/s)
     CalibrationResult result_;
     std::string reason_;
     bool fail(const std::string& reason);
     bool endStill();
     bool meanGyro(int64_t a,int64_t b,Vec3& w) const;
+    void stillBiasCorrection(Quat imuToHead,int delayMs);
 };
 }
