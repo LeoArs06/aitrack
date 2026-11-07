@@ -278,7 +278,7 @@
           <item><widget class="QLabel" name="imuPortLabel"><property name="text"><string>&amp;Port</string></property><property name="buddy"><cstring>imuPort</cstring></property></widget></item>
           <item><widget class="ImuPortComboBox" name="imuPort"/></item>
           <item><widget class="QPushButton" name="imuConnect"><property name="text"><string>Connect</string></property><property name="checkable"><bool>true</bool></property></widget></item>
-          <item><widget class="QPushButton" name="imuCalibrate"><property name="text"><string>Calibrate</string></property><property name="toolTip"><string>Track with your face visible. Hold still for 2 seconds, then move all three axes for 10 seconds.</string></property></widget></item>
+          <item><widget class="QPushButton" name="imuCalibrate"><property name="text"><string>Recalibrate</string></property><property name="toolTip"><string>Calibration is automatic while you track. Press only after moving the sensor on the headset: it forgets the learned mounting and relearns it in about 15 s of normal head movement.</string></property></widget></item>
          </layout></item>
          <item><layout class="QHBoxLayout" name="opticalStrengthRow">
           <item><widget class="QLabel" name="opticalLabel"><property name="text"><string>Optical &amp;correction</string></property><property name="buddy"><cstring>opticalStrength</cstring></property></widget></item>

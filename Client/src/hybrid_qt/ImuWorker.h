@@ -43,7 +43,8 @@ private:
     hybrid::ImuProtocol parser_;
     hybrid::ClockSync clock_;
     hybrid::HybridFusion fusion_;
-    hybrid::Calibration calibration_;
+    hybrid::AutoCalibrator auto_;
+    bool calibrated_ = false; // false: send the plain camera pose (AITrack behaviour)
     hybrid::CalibrationResult savedCalibration_;
     hybrid::Info info_;
     std::unique_ptr<UDPSender> sender_;
@@ -58,7 +59,7 @@ private:
     bool outputEnabled_ = false, calibrating_ = false, sim_ = false, stopping_ = false;
     bool firstSample_ = true;
     int strength_ = 50;
-    int64_t probeStart_ = 0, lastSample_ = 0, retryAt_ = 0, calibrationStart_ = 0;
+    int64_t probeStart_ = 0, lastSample_ = 0, retryAt_ = 0;
     int64_t simStart_ = 0, lastOptical_ = 0, lastRateReport_ = 0;
     size_t simIndex_ = 0;
     uint64_t simCycle_ = 0, imuCount_ = 0, opticalCount_ = 0;

@@ -33,10 +33,10 @@ int main(int argc, char** argv) {
         [&](QString, QString progress, bool connected, bool, bool) {
             if (connected && !epoch) {
                 epoch = hybrid_qt::hostNowUs();
-                post([=] { worker->calibrate(true); });
             }
-            still |= progress.contains("Hold still");
-            motion |= progress.contains("Move your head slowly");
+            // No button: calibration is learned in the background.
+            still |= progress.contains("Learning sensor mounting");
+            motion |= progress.contains("Calibrated automatically");
             if (progress.contains("failed") && lastFailure != progress) {
                 lastFailure = progress; std::cerr << progress.toStdString() << '\n';
             }
@@ -69,6 +69,6 @@ int main(int argc, char** argv) {
     hybrid::CalibrationResult stored;
     const bool persisted = hybrid::CalibrationResult::deserialize(prefs.getConfig().imu_calibration, stored);
     const bool passed = saved && still && motion && clean && persisted;
-    std::cerr << "Qt guided calibration / saved result: " << (passed ? "PASS" : "FAIL") << '\n';
+    std::cerr << "Qt automatic calibration / saved result: " << (passed ? "PASS" : "FAIL") << '\n';
     return passed ? 0 : 1;
 }

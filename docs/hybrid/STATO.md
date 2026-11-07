@@ -28,6 +28,19 @@ eseguibile `AresTracker.exe`, cartella portabile `software/ARES-Tracker`. Branch
   `hybrid`, ottica 24 Hz, latenza stimata 60 ms, chiusura pulita.
   **Senza calibrazione**: rotazioni non attendibili (correzione 133 °/min).
 
+## Svolta 7/11 sera: calibrazione automatica (dati reali)
+- Registrazione reale (`hybrid_log`) analizzata con `tests/hybrid/replay.cpp`
+  (`hybrid_replay log.csv -1 out.csv`): webcam a **15 fps** (poca luce),
+  roll neutro ~87°, pose valide 99,7%. La calibrazione guidata falliva perché
+  usava 4 fotogrammi fissi (pensati per 30 fps) e una fase "fermo" impossibile
+  con le cuffie in testa.
+- Ora: `AutoCalibrator` in background, nessun pulsante né fase ferma. Finché
+  non aggancia esce la posa webcam pura (come AITrack). Sul log reale aggancia
+  in 12 s: residuo 15%, latenza 90 ms, bias = misura a tavolo, deriva 1,9 °/min.
+  Uscita fusa vs webcam: ritardo -90 ms, rumore -30/40%, scarto ~1°.
+- Mappatura sul casco di Leo (cuffia sinistra): yaw=-gy, pitch=+gz, roll≈+gx.
+- Pulsante "Recalibrate": dimentica il montaggio e lo rifà da zero.
+
 ## Non verificato
 - Modalità Webcam e Ibrida **con un volto reale** davanti alla C920
   (le correzioni upstream cambiano il percorso webcam: confrontare con
@@ -39,8 +52,8 @@ eseguibile `AresTracker.exe`, cartella portabile `software/ARES-Tracker`. Branch
   insieme alla fusione: indicativi, non una misura.
 
 ## Prossimi passi
-1. Leo: cuffie indossate, Calibrate (2 s fermo + 10 s movimento), poi
-   prova con `hybrid_log=true`; messa a punto con i log.
+1. Leo: prova in DCS con calibrazione automatica; nuove registrazioni
+   `hybrid_log` → replay per mettere a punto la fusione sui dati reali.
 2. Confronto modalità Webcam vs AITrack 0.7.1 e roll a testa dritta.
 
 ## Per riprendere

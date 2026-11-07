@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
     QObject::connect(worker, &hybrid_qt::ImuWorker::diagnostics, &app,
         [&](QString text, QString progress, bool connected, bool, bool) {
             sawSim |= connected && text.contains("SIM");
-            sawCancelled |= progress.contains("cancelled");
+            sawCancelled |= progress.contains("Recalibrating");
             sawFallback |= text.contains("optical only");
         });
     QObject::connect(worker, &hybrid_qt::ImuWorker::outputAcknowledged, &app,
@@ -73,7 +73,8 @@ int main(int argc, char** argv) {
     auto post = [&](auto fn) { QMetaObject::invokeMethod(worker, fn, Qt::QueuedConnection); };
     const int firstPort = receiver.localPort();
     post([=] {
-        worker->configure("127.0.0.1", firstPort, 50, {}, true);
+        // A stored calibration: fused 200 Hz output from the first sample.
+        worker->configure("127.0.0.1", firstPort, 50, QString::fromStdString(hybrid::CalibrationResult{}.serialize()), true);
         worker->setOutputEnabled(true, 1); worker->requestConnection(true);
     });
     QTimer optical;

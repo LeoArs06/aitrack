@@ -157,6 +157,23 @@ void calibrationTests() {
     Calibration sway;runCalibration(sway,Simulator(swaying));if(!sway.finish()) throw Failure("Sway calibration: "+sway.reason());
     double swayBias=(sway.result().bias-swaying.bias).norm()*degrees;metric("Bias error with 1 deg sway",swayBias,"deg/s");
     CHECK(swayBias<0.25);CHECK(angularDistance(sway.result().imuToHead,swaying.mounting)*degrees<1);
+    {   // Background auto-calibration, 15 fps webcam (dim light), sway, no still phase.
+        auto ac=c;ac.durationSec=30;ac.opticalHz=15;ac.latencyMs=90;ac.swayDeg=1;ac.seed+=41;
+        ac.bias={-1.4*radians,0.8*radians,0.6*radians};Simulator s15(ac);AutoCalibrator autoCal;ClockSync clock;
+        size_t i=0,j=0;int64_t locked=-1;
+        while(i<s15.imu().size() || j<s15.optical().size()) {
+            int64_t t;
+            if(i<s15.imu().size() && (j==s15.optical().size() || s15.imu()[i].arrivalUs<=s15.optical()[j].arrivalUs)) {
+                auto e=s15.imu()[i++];t=clock.observe(e.mcuUs,e.arrivalUs);autoCal.addImuSample(t,scale(e.raw()));
+            } else { auto e=s15.optical()[j++];t=e.arrivalUs;autoCal.addOptical(t,e.pose); }
+            if(autoCal.update(t) && locked<0) locked=t-ac.hostOffsetUs;
+        }
+        CHECK(autoCal.ready());
+        double mount=angularDistance(autoCal.result().imuToHead,ac.mounting)*degrees;
+        metric("Auto-cal lock time (15 fps)",locked*1e-6,"s");metric("Auto-cal mounting error",mount,"deg");
+        metric("Auto-cal latency",autoCal.result().latencyMs,"ms");metric("Auto-cal bias error",(autoCal.result().bias-ac.bias).norm()*degrees,"deg/s");
+        CHECK(mount<2);CHECK(std::abs(autoCal.result().latencyMs-90)<=20);CHECK((autoCal.result().bias-ac.bias).norm()*degrees<0.3);
+    }
     c.motion=Simulator::Motion::SlowRamp;c.outliers=false;Simulator deficient(c);Calibration poor;runCalibration(poor,deficient);
     CHECK(!poor.finish());CHECK(poor.phase()==Calibration::Phase::Failed);CHECK(!poor.reason().empty());
 }

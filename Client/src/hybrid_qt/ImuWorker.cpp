@@ -65,7 +65,7 @@ void ImuWorker::configure(QString ip, int port, int strength, QString calibratio
     if (calibration != appliedCalibration_ && !calibration.isEmpty() &&
         hybrid::CalibrationResult::deserialize(calibration.toStdString(), c)) {
         appliedCalibration_ = calibration;
-        savedCalibration_ = c;
+        savedCalibration_ = c; calibrated_ = true;
         fusion_.setCalibration(c);
     }
     openLog(logging);
@@ -158,8 +158,7 @@ void ImuWorker::closePort(QString reason) {
     // Retain fusion history during outages so its optical crossfade can run.
     if (hadConnection && calibrating_) {
         calibrating_ = false;
-        calibration_ = hybrid::Calibration{};
-        progress_ = "Calibration failed: IMU disconnected";
+        progress_ = "IMU disconnected";
     }
 }
 
@@ -190,13 +189,8 @@ void ImuWorker::receive(const uint8_t* bytes, size_t size, int64_t arrival) {
                 << raw->ax << ',' << raw->ay << ',' << raw->az << ',' << raw->temp_raw << ','
                 << raw->gx << ',' << raw->gy << ',' << raw->gz << ',' << int(raw->flags) << ",,,,,,,\n";
             fusion_.addImuSample(mapped, sample);
-            if (calibrating_) {
-                // The adapter marks the first sample as a fusion/clock epoch reset.
-                // It is not calibration evidence; genuine subsequent resets are
-                // rejected by Calibration itself (including during the still phase).
-                if (!first) calibration_.addImuSample(mapped, sample);
-                updateCalibration(arrival);
-            }
+            // The first sample is a clock epoch reset, not calibration evidence.
+            if (!first) auto_.addImuSample(mapped, sample);
             output(arrival);
         } else if (const auto* status = std::get_if<hybrid::Status>(&message)) {
             if (connected_ && status->code != 3) {
@@ -220,13 +214,20 @@ void ImuWorker::addOptical(int64_t arrival, hybrid::OpticalPose pose) {
     if (csv_) *csv_ << "optical," << arrival << ",,,,,,,,,,," << int(pose.valid) << ','
         << pose.yaw << ',' << pose.pitch << ',' << pose.roll << ',' << pose.x << ',' << pose.y << ',' << pose.z << '\n';
     fusion_.addOptical(arrival, pose);
-    if (calibrating_) calibration_.addOptical(arrival, pose);
+    auto_.addOptical(arrival, pose);
+    // Until the mounting is learned, behave exactly like AITrack: camera pose out.
+    if (connected_ && !calibrated_ && outputEnabled_ && pose.valid && sender_ && sender_->valid) {
+        hybrid::Pose6 p; p.x = pose.x; p.y = pose.y; p.z = pose.z;
+        p.yaw = pose.yaw; p.pitch = pose.pitch; p.roll = pose.roll;
+        double packet[6]; p.packet(packet); sender_->send_data(packet);
+    }
 }
 
 void ImuWorker::output(int64_t now) {
     // Advance even without a sender so diagnostics and fallback state remain current.
     const auto result = fusion_.output(now);
     if (!outputEnabled_ || !result.valid || !sender_ || !sender_->valid) return;
+    if (connected_ && !calibrated_) return; // camera pass-through in addOptical()
     double packet[6]; result.pose.packet(packet);
     static_assert(sizeof(packet) == 48, "OpenTrack expects six 64-bit doubles");
     sender_->send_data(packet);
@@ -259,39 +260,32 @@ void ImuWorker::tick() {
     updateCalibration(now);
 }
 
+// Calibration runs continuously in the background from ordinary head motion.
+// The button only forgets the learned mounting (e.g. after moving the sensor).
 void ImuWorker::calibrate(bool start) {
-    if (!start) {
-        if (calibrating_) progress_ = "Calibration cancelled";
-        calibrating_ = false; calibration_ = hybrid::Calibration{};
-    } else if (connected_ && outputEnabled_) {
-        calibrationStart_ = hostNowUs(); calibration_.begin(calibrationStart_);
-        calibrating_ = true; progress_ = QString::fromUtf8("Hold still\xe2\x80\xa6");
+    if (start) {
+        auto_.reset(); calibrated_ = false;
+        savedCalibration_ = hybrid::CalibrationResult{}; appliedCalibration_.clear();
+        resetFusion();
+        emit calibrationSaved(QString());
+        progress_ = "Recalibrating: use the tracker normally";
     }
     report();
 }
 
 void ImuWorker::updateCalibration(int64_t now) {
-    if (!calibrating_) return;
-    if (calibration_.phase() == hybrid::Calibration::Phase::Failed) {
-        calibrating_ = false;
-        progress_ = "Calibration failed: " + QString::fromStdString(calibration_.reason());
+    if (!connected_ || !outputEnabled_) return;
+    if (auto_.update(now)) {
+        savedCalibration_ = auto_.result(); calibrated_ = true;
+        appliedCalibration_ = QString::fromStdString(savedCalibration_.serialize());
+        resetFusion();
+        emit calibrationSaved(appliedCalibration_);
+        progress_ = QString("Calibrated automatically (fit %1%, camera delay %2 ms)")
+            .arg(int(savedCalibration_.quality * 100)).arg(savedCalibration_.latencyMs, 0, 'f', 0);
         report();
-    } else if (calibration_.phase() == hybrid::Calibration::Phase::Motion) {
-        progress_ = QString::fromUtf8("Move your head slowly: left-right, up-down, tilt\xe2\x80\xa6");
-        if (now - calibrationStart_ >= 12500000) {
-            calibrating_ = false;
-            if (calibration_.finish()) {
-                savedCalibration_ = calibration_.result();
-                fusion_.setCalibration(savedCalibration_);
-                appliedCalibration_ = QString::fromStdString(savedCalibration_.serialize());
-                progress_ = QString("Done: quality %1, latency %2 ms")
-                    .arg(savedCalibration_.quality, 0, 'f', 2).arg(savedCalibration_.latencyMs, 0, 'f', 0);
-                emit calibrationSaved(appliedCalibration_);
-            } else progress_ = "Calibration failed: " + QString::fromStdString(calibration_.reason());
-            report();
-        }
-    } else if (now - calibrationStart_ > 3500000) {
-        calibrating_ = false; progress_ = "Calibration failed: no IMU samples"; report();
+    } else if (!calibrated_) {
+        const auto p = QString("Learning sensor mounting: %1% - look around normally").arg(int(auto_.progress() * 100));
+        if (p != progress_) { progress_ = p; report(); }
     }
 }
 
@@ -314,7 +308,7 @@ void ImuWorker::report() {
         .arg(qulonglong(c.lost)).arg(qulonglong(c.crcErrors))
         .arg(now - lastOptical_ > 500000 ? 0.0 : opticalHz_, 0, 'f', 0)
         .arg(d.latencyMs, 0, 'f', 0).arg(d.driftDegPerMin, 0, 'f', 1);
-    emit diagnostics(text, progress_, connected_, requested_, calibrating_);
+    emit diagnostics(text, progress_, connected_, requested_, false);
     if (csv_) csv_->flush();
 }
 

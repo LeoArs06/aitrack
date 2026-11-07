@@ -247,7 +247,7 @@ void WindowMain::update_hybrid_controls() {
 	const bool hybrid = ui.hybridMode->currentIndex() == 1;
 	ui.imuControls->setEnabled(hybrid);
 	ui.imuCalibrate->setEnabled(hybrid && imu_connected_ && tracking_);
-	ui.imuCalibrate->setText(imu_calibrating_ ? "Cancel" : "Calibrate");
+	ui.imuCalibrate->setText("Recalibrate");
 }
 
 void WindowMain::set_hybrid_status(const QString& text, const QString& progress,
