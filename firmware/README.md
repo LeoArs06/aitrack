@@ -23,6 +23,43 @@ Con collegamento diretto rimane il margine elettrico fuori specifica:
 V_IH minimo ATmega32U4 = 0,7 × 5 V = 3,5 V > 3,3 V. Usare fili corti;
 se compaiono errori I²C, controllare cablaggio/pull-up e usare un BSS138.
 
+## Schema elettrico definitivo (collegamento diretto, senza level shifter)
+
+```
+   USB-C (PC)
+      │ 5 V
+┌─────┴──────────── Pro Micro 5 V / 16 MHz ───┐
+│ VCC (5 V) ●────────────────────────┐        │
+│ GND       ●──────────────────┐     │        │
+│ 2 / SDA   ●────────────┐     │     │        │   pull-up interni ATmega
+│ 3 / SCL   ●──────┐     │     │     │        │   DISATTIVATI dal firmware
+│ 7 (INT, riserva) ○     │     │     │        │
+└──────────────────┼─────┼─────┼─────┼────────┘
+                   │     │     │     │   fili corti (< 10 cm)
+┌──────────────────┼─────┼─────┼─────┼──────── HW-123 (GY-521) ─┐
+│               SCL●  SDA●  GND●  VCC●                          │
+│                  │     │     │     │                          │
+│                  │     │     │   ┌─┴──────┐ 3,3 V             │
+│                  │     │     │   │  LDO   ├──────┬─────┬──── VDD MPU
+│                  │     │     │   │ (662K) │      │     │      │
+│                  │     │     │   └───┬────┘   R pull-up (on-board,
+│                  │     │     │       │        ~2,2–4,7 kΩ verso 3,3 V)
+│                  └─────┼─────┼───────┼─────────┘     │      │
+│                        └─────┼───────┼───────────────┘      │
+│                    AD0 ●─────┤ GND   │  → indirizzo 0x68     │
+│                    INT ○  XDA ○  XCL ○   (non collegati)     │
+└───────────────────────────────────────────────────────────────┘
+```
+
+- Bus I²C a riposo a **3,3 V** (pull-up del modulo): il chip IMU non vede mai
+  5 V, purché i pull-up interni del Pro Micro restino spenti (lo fa il
+  firmware subito dopo `Wire.begin()`, a ogni re-inizializzazione).
+- Valore delle resistenze di pull-up e uscita del regolatore: da misurare
+  come sopra prima di collegare SDA/SCL.
+- Se servisse il level shifter (errori I²C persistenti): BSS138 a 2 canali,
+  lato LV = 3,3 V del modulo, lato HV = VCC Pro Micro; nessuna modifica al
+  firmware.
+
 ## Compilazione e upload
 
 Da root del repository, con arduino-cli e core installato:
