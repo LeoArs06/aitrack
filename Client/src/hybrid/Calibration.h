@@ -1,0 +1,41 @@
+#pragma once
+#include "ImuScaling.h"
+#include "PoseConvention.h"
+#include <cstdint>
+#include <string>
+#include <vector>
+namespace hybrid {
+struct CalibrationResult {
+    Vec3 bias;
+    Quat imuToHead;
+    double latencyMs=60,quality=0,residualDegPerSec=0;
+    Vec3 excitationDegPerSec;
+    std::string serialize() const;
+    static bool deserialize(const std::string& text,CalibrationResult& result);
+};
+class Calibration {
+public:
+    enum class Phase { Idle,Still,Motion,Complete,Failed };
+    void begin(int64_t hostUs);
+    void addImuSample(int64_t hostUs,const SampleSI& sample);
+    void addOptical(int64_t arrivalHostUs,const OpticalPose& pose);
+    bool finish(); // Call after the motion prompt (~10 s); never installs a failed result.
+    Phase phase() const { return phase_; }
+    const std::string& reason() const { return reason_; }
+    const CalibrationResult& result() const { return result_; }
+private:
+    struct Gyro { int64_t t; Vec3 w; };
+    struct Opt { int64_t t; Quat q; };
+    Phase phase_=Phase::Idle;
+    int64_t start_=0;
+    std::vector<Gyro> gyro_;
+    std::vector<Opt> optical_;
+    Vec3 sumW_,sumW2_,sumA_,sumA2_;
+    size_t stillCount_=0;
+    CalibrationResult result_;
+    std::string reason_;
+    bool fail(const std::string& reason);
+    bool endStill();
+    bool meanGyro(int64_t a,int64_t b,Vec3& w) const;
+};
+}
