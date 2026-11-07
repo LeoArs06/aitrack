@@ -1,4 +1,6 @@
-# Head tracker ibrido — istruzioni Windows
+# ARES Tracker — istruzioni Windows
+
+ARES Tracker (ARCUS LAB) è un fork di AITrack con fusione IMU + webcam.
 
 ## 1. Preparare il modulo (una volta)
 
@@ -9,8 +11,8 @@
    VCC→VCC, GND→GND, INT libero).
 3. Carica il firmware:
    ```
-   arduino-cli compile --fqbn arduino:avr:leonardo firmware/headtracker_imu
-   arduino-cli upload  --fqbn arduino:avr:leonardo -p COMx firmware/headtracker_imu
+   arduino-cli compile --fqbn arduino:avr:micro firmware/headtracker_imu
+   arduino-cli upload  --fqbn arduino:avr:micro -p COMx firmware/headtracker_imu
    ```
    Se l'upload non parte: doppio tocco RST→GND e rilancia subito.
 4. Diagnosi (cuffie appoggiate ferme sul tavolo, 60 s):
@@ -24,9 +26,9 @@
 
 ## 2. Programma
 
-- Pronto all'uso: `software/AITrack-hybrid/AITrack.exe` (cartella portabile).
+- Pronto all'uso: `software/ARES-Tracker/AresTracker.exe` (cartella portabile).
 - Ricompilare: in PowerShell nella cartella `aitrack`:
-  `.\tools\build.ps1 -Tests -Dist ..\AITrack-hybrid`
+  `.\tools\build.ps1 -Tests -Dist ..\ARES-Tracker`
   (scarica da solo Qt 5.15.2 e le dipendenze; serve Visual Studio Build
   Tools con C++, Python, 7-Zip).
 
@@ -35,7 +37,7 @@
 1. OpenTrack: input **UDP over network**, porta 4242 (come con AITrack
    originale). Filtro: nessuno o leggero (l'uscita è già filtrata, 200 Hz).
    Tieni il tasto di centratura di OpenTrack.
-2. AITrack-hybrid: Mode **Hybrid IMU**, Port **Auto**, **Connect**, poi
+2. ARES Tracker: Mode **Hybrid IMU**, Port **Auto**, **Connect**, poi
    **Start tracking**.
 3. Prima volta: **Calibrate** con il volto ben visibile. Resta fermo 2 s,
    poi muovi la testa lentamente per ~10 s: destra-sinistra, su-giù,

@@ -1,3 +1,8 @@
+# ARES Tracker (ARCUS LAB)
+
+Fork di AITrack con head tracking ibrido IMU + webcam: vedi `docs/hybrid/ISTRUZIONI.md`.
+Il resto di questo file è il README originale di AITrack.
+
 ![](Images/Logo.png)
 
 <p align="center"> - The open head tracker - </p>

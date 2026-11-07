@@ -14,7 +14,7 @@ WindowMain::WindowMain(QWidget *parent)
 	ui.setupUi(this);
 	this->layout()->setSizeConstraint(QLayout::SetFixedSize);
 
-	this->setWindowTitle(QString("AITrack %1").arg(AITRACK_VERSION));
+	this->setWindowTitle(QString("%1 %2 - by ARCUS LAB (based on AITrack %3)").arg(ARES_NAME, ARES_VERSION, AITRACK_VERSION));
 
 	this->conf_win = new ConfigWindow(this);
 	this->conf_win->hide();

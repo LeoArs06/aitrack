@@ -1,4 +1,4 @@
-# Build AITrack (hybrid fork) on Windows: dependencies, Qt, MSBuild, deploy.
+# Build ARES Tracker (AITrack hybrid fork) on Windows: dependencies, Qt, MSBuild, deploy.
 # Usage (PowerShell, repo root):  .\tools\build.ps1 [-Dist <folder>] [-Tests]
 param(
     [string]$QtDir = (Join-Path $PSScriptRoot "..\..\deps\Qt\5.15.2\msvc2019_64"),
@@ -64,9 +64,9 @@ if (-not (Test-Path "$deps\OpenCV")) {
     "-p:PlatformToolset=$toolset" "-p:QtInstall=$QtDir" "-p:WindowsTargetPlatformVersion=$sdk"
 if ($LASTEXITCODE -ne 0) { throw "MSBuild failed" }
 
-# 5. Deploy runtime next to AITrack.exe
+# 5. Deploy runtime next to AresTracker.exe
 $rel = Join-Path $repo "x64\Release"
-& "$QtDir\bin\windeployqt.exe" --release --no-translations --no-compiler-runtime "$rel\AITrack.exe" | Out-Null
+& "$QtDir\bin\windeployqt.exe" --release --no-translations --no-compiler-runtime "$rel\AresTracker.exe" | Out-Null
 Copy-Item "$QtDir\bin\Qt5SerialPort.dll", "$deps\OpenCV\bin\opencv_world460.dll", "$deps\onnxruntime\lib\onnxruntime.dll" $rel -Force
 Copy-Item -Recurse -Force (Join-Path $repo "models") $rel
 
@@ -83,5 +83,5 @@ if ($Dist) {
     robocopy $rel $Dist /E /XF *.lib *.pdb *.exp prefs.ini log.txt /XD logs | Out-Null
     Write-Host "Portable build: $Dist"
 }
-Write-Host "OK: $rel\AITrack.exe"
+Write-Host "OK: $rel\AresTracker.exe"
 exit 0

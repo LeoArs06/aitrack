@@ -2,7 +2,7 @@
 
 Firmware 1.0, protocollo binario v1 in `docs/hybrid/PROTOCOL.md`.
 Target: Pro Micro ATmega32U4 **5 V / 16 MHz**, core Arduino AVR **1.8.8**,
-FQBN `arduino:avr:leonardo`. Solo `Wire`, nessun HID.
+FQBN `arduino:avr:micro` (il clone usato ha il bootloader Arduino Micro, VID 2341 PID 8037; `leonardo` compila uguale). Solo `Wire`, nessun HID.
 
 | HW-123 / GY-521 | Pro Micro | Note |
 |---|---|---|
@@ -66,8 +66,8 @@ Da root del repository, con arduino-cli e core installato:
 
 ```powershell
 arduino-cli core install arduino:avr@1.8.8
-arduino-cli compile --fqbn arduino:avr:leonardo firmware/headtracker_imu
-arduino-cli upload --fqbn arduino:avr:leonardo -p COMx firmware/headtracker_imu
+arduino-cli compile --fqbn arduino:avr:micro firmware/headtracker_imu
+arduino-cli upload --fqbn arduino:avr:micro -p COMx firmware/headtracker_imu
 ```
 
 Se l'upload fallisce sul Pro Micro, fare doppio tap sul reset e usare la porta
@@ -119,5 +119,6 @@ da 0x68 è trattato come famiglia 6500 per ACCEL_CONFIG2 e temperatura;
 un clone con ID sconosciuto richiede conferma su hardware. Le righe di
 campioni perse prima della prima ricezione non sono misurabili tramite gap.
 
-Verifica senza hardware: compilazione e self-test del parser. Nessuna prova
-elettrica, di upload o di acquisizione reale è stata eseguita.
+Verifica su hardware (7/11/2026, modulo cablato nel box): upload ok,
+MPU6050 WHO_AM_I 0x68, 200,4 Hz, 0 persi, 0 CRC, 0 errori I²C; a riposo
+rumore gyro 1–3 LSB (~0,05 °/s), bias ~1,6 °/s, accel ~0,98 g.

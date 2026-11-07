@@ -115,7 +115,8 @@ Presenter::Presenter(IView& view, std::unique_ptr<TrackerFactory>&& t_factory, s
 		this->view->show_message("There was a problem initializing the tracker. Check the models folder and restart the program.", MSG_SEVERITY::CRITICAL);
 	}
 
-	if (state.autocheck_updates)
+	// ARES Tracker: upstream AITrack releases are not updates for this fork.
+	if (false && state.autocheck_updates)
 	{
 		logger->info("Checking for updates");
 		update_chkr = std::make_unique<UpdateChecker>(std::string(AITRACK_VERSION), (IUpdateSub*)this);

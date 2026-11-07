@@ -1,6 +1,7 @@
-# Stato — head tracker ibrido
+# Stato — ARES Tracker (head tracker ibrido)
 
-Aggiornato: 7 novembre 2026 sera. Branch `hybrid-imu` (fork `LeoArs06/aitrack`).
+Aggiornato: 7 novembre 2026, 21:30. Nome prodotto: **ARES Tracker** (ARCUS LAB),
+eseguibile `AresTracker.exe`, cartella portabile `software/ARES-Tracker`. Branch `hybrid-imu` (fork `LeoArs06/aitrack`).
 
 ## Fatto (verificato su PC, senza hardware IMU)
 - Build originale e build ibrida: VS Build Tools 2026 (v145), Qt 5.15.2
@@ -19,8 +20,15 @@ Aggiornato: 7 novembre 2026 sera. Branch `hybrid-imu` (fork `LeoArs06/aitrack`).
 - Correzioni upstream: landmark subpixel, selezione volto, controllo
   solvePnP, riconfigurazione UDP, preferenze ONNX, frame vuoti, filtro EA.
 
+## Verificato su hardware (7/11, modulo cablato e chiuso nel box, COM18)
+- Flash firmware ok (FQBN `arduino:avr:micro`: bootloader Arduino Micro).
+- `imu_diag.py`: MPU6050 0x68, 200,4 Hz, 0 persi, 0 CRC, 0 errori I²C;
+  a riposo gyro 1–3 LSB (~0,05 °/s), accel ~0,98 g.
+- App con IMU vera + volto: 200,4 Hz UDP, 0 pacchetti errati, stato
+  `hybrid`, ottica 24 Hz, latenza stimata 60 ms, chiusura pulita.
+  **Senza calibrazione**: rotazioni non attendibili (correzione 133 °/min).
+
 ## Non verificato
-- Firmware su hardware (modulo non ancora saldato).
 - Modalità Webcam e Ibrida **con un volto reale** davanti alla C920
   (le correzioni upstream cambiano il percorso webcam: confrontare con
   AITrack 0.7.1 di OpenTrack con `tools/udp_monitor.py`).
@@ -31,10 +39,9 @@ Aggiornato: 7 novembre 2026 sera. Branch `hybrid-imu` (fork `LeoArs06/aitrack`).
   insieme alla fusione: indicativi, non una misura.
 
 ## Prossimi passi
-1. Leo: 1 minuto davanti alla C920 → confronto Webcam vs 0.7.1 e prova
-   Ibrida simulata con volto (traslazione, Hz ottici, roll a riposo).
-2. Leo: saldatura, misure 3,3 V, `imu_diag.py` fermo 60 s + scossa.
-3. Prova ibrida reale con `hybrid_log=true`; messa a punto con i log.
+1. Leo: cuffie indossate, Calibrate (2 s fermo + 10 s movimento), poi
+   prova con `hybrid_log=true`; messa a punto con i log.
+2. Confronto modalità Webcam vs AITrack 0.7.1 e roll a testa dritta.
 
 ## Per riprendere
 Leggi questo file, `DESIGN.md`, `PROTOCOL.md`. Build: `tools/build.ps1 -Tests`.

@@ -61,11 +61,11 @@
   </ImportGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <TargetName>AITrack Debug</TargetName>
+    <TargetName>AresTracker Debug</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <TargetName>AITrack</TargetName>
+    <TargetName>AresTracker</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debugg|x64'">
     <LinkIncremental>true</LinkIncremental>

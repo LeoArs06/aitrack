@@ -29,7 +29,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>AITrack</string>
+   <string>ARES Tracker</string>
   </property>
   <property name="windowIcon">
    <iconset resource="../../res/Resource.qrc">
@@ -206,7 +206,7 @@
          </sizepolicy>
         </property>
         <property name="toolTip">
-         <string>You can disable the video preview to further reduce the CPU usage of AITrack.</string>
+         <string>You can disable the video preview to further reduce the CPU usage of ARES Tracker.</string>
         </property>
         <property name="toolTipDuration">
          <number>-1</number>
