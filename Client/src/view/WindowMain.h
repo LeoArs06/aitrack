@@ -38,6 +38,8 @@ public:
 	void set_shortcuts(bool enabled);
 	IView* get_calibration_window();
 	void set_visible(bool visible) {};
+	void set_hybrid_status(const QString& text, const QString& progress,
+		bool connected, bool requested, bool calibrating) override;
 
 	//IRootView
 	void notify(IView *self);
@@ -47,6 +49,8 @@ public:
 
 private:
 	Ui::MainWindow ui;
+	bool tracking_ = false, imu_connected_ = false, imu_calibrating_ = false;
+	void update_hybrid_controls();
 
 	//Shortcuts
 	QGlobalShortcut *toggle_tracking_shortcut{nullptr};

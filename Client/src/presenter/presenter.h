@@ -10,13 +10,16 @@
 #include "../camera/Camera.h"
 
 #include "filters.h"
+#include <QObject>
+#include <QThread>
+namespace hybrid_qt { class ImuWorker; }
 
 #include "../tracker/TrackerFactory.h"
 #include "../tracker/TrackerWrapper.h"
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/basic_file_sink.h"
 
-class Presenter : IPresenter, IUpdateSub
+class Presenter : public QObject, IPresenter, IUpdateSub
 {
 private:
 	FaceData face_data;
@@ -39,6 +42,14 @@ private:
 	bool run = false;
 	// Whether the main recognition loop has to paint the recognized landmarks
 	bool paint = true;
+	QThread* imu_thread = nullptr;
+	hybrid_qt::ImuWorker* imu_worker = nullptr;
+	quint64 output_generation = 0;
+	bool worker_may_send = false;
+	bool closing = false;
+	void configure_imu();
+	void update_output_owner();
+	void stop_imu_thread();
 
 	/**
 	* Gets the current configuration state and sets the GUI to match it.
@@ -107,6 +118,12 @@ public:
 	std::unique_ptr<UpdateChecker> update_chkr;
 
 	Presenter(IView& view, std::unique_ptr<TrackerFactory>&& t_factory, std::unique_ptr<ConfigMgr>&& conf_mgr);
+	~Presenter() override;
+	void set_hybrid_mode(bool hybrid) override;
+	void set_imu_port(const std::string& port) override;
+	void connect_imu(bool connect) override;
+	void calibrate_imu(bool start) override;
+	void set_optical_strength(int strength) override;
 
 	//IPresenter
 	void toggle_tracking();

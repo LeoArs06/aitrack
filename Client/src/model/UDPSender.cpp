@@ -57,13 +57,14 @@ UDPSender::UDPSender(const char* dest_ip, int dest_port)
 UDPSender::~UDPSender()
 {
     std::cout << "Closing connection" << std::endl;
-    closesocket(s);
+    if (s != INVALID_SOCKET) closesocket(s);
     WSACleanup();
 }
 
 
 void UDPSender::send_data(double* d)
 {
+    if (!valid || s == INVALID_SOCKET) return;
     // Make packet
     const char* pkt = (char*)d;
     sendto(s, pkt, BUFFER_SIZE, 0, (sockaddr*)&dest, (dest.sin_family == AF_INET6 ? sizeof(dest_IPv6) : sizeof(dest)));

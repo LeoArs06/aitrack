@@ -28,7 +28,7 @@ private:
 	};
 
 	WSAData data;
-	SOCKET s;
+	SOCKET s = INVALID_SOCKET;
 
 public:
 	std::string ip;

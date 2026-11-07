@@ -12,6 +12,8 @@ enum MSG_SEVERITY { CRITICAL, NORMAL };
 
 class IView {
 public:
+	virtual void set_hybrid_status(const QString& text, const QString& progress,
+		bool connected, bool requested, bool calibrating) {}
 	/**
 	* Registers a presenter as an observer of this view
 	*/

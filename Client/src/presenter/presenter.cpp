@@ -1,3 +1,6 @@
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <chrono>
 #include <memory>
 #include <string.h>
@@ -8,6 +11,9 @@
 #include "../camera/CameraFactory.h"
 
 #include "../version.h"
+#include "../hybrid_qt/HostClock.h"
+#include "../hybrid_qt/ImuWorker.h"
+#include <algorithm>
 
 #include <QThread>
 #include <qapplication.h>
@@ -24,6 +30,26 @@ Presenter::Presenter(IView& view, std::unique_ptr<TrackerFactory>&& t_factory, s
 	this->view = &view;
 
 	this->view->connect_presenter(this);
+	imu_thread = new QThread();
+	imu_worker = new hybrid_qt::ImuWorker();
+	imu_worker->moveToThread(imu_thread);
+	connect(imu_thread, &QThread::started, imu_worker, &hybrid_qt::ImuWorker::initialize);
+	connect(imu_thread, &QThread::finished, imu_worker, &QObject::deleteLater);
+	connect(imu_worker, &hybrid_qt::ImuWorker::stopped, imu_thread, &QThread::quit, Qt::DirectConnection);
+	connect(imu_worker, &hybrid_qt::ImuWorker::diagnostics, this,
+		[this](QString text, QString progress, bool connected, bool requested, bool calibrating) {
+			this->view->set_hybrid_status(text, progress, connected, requested, calibrating);
+		}, Qt::QueuedConnection);
+	connect(imu_worker, &hybrid_qt::ImuWorker::calibrationSaved, this, [this](QString calibration) {
+		state.imu_calibration = calibration.toStdString();
+		this->conf_mgr->updateConfig(state);
+	}, Qt::QueuedConnection);
+	connect(imu_worker, &hybrid_qt::ImuWorker::outputAcknowledged, this, [this](bool active, quint64 generation) {
+		if (generation == output_generation) worker_may_send = active;
+	}, Qt::QueuedConnection);
+	imu_thread->start();
+	configure_imu();
+	set_imu_port(state.imu_port);
 
 	this->paint = state.show_video_feed;
 	this->filter = nullptr;
@@ -205,6 +231,7 @@ void Presenter::run_loop()
 				QThread::msleep(frame_duration.count());
 				continue;
 			}
+			const auto capture_us = hybrid_qt::hostNowUs();
 			cv::Mat mat(cam->height, cam->width, CV_8UC3, video_tex_pixels.get());
 
 			t->predict(mat, d, this->filter);
@@ -219,8 +246,20 @@ void Presenter::run_loop()
 				if (d.pose_valid)
 				{
 					update_tracking_data(d);
-					send_data(buffer_data);
+					if (!state.hybrid_mode && !worker_may_send) send_data(buffer_data);
 				}
+			}
+
+			if (state.hybrid_mode && imu_worker) {
+				hybrid::OpticalPose pose;
+				pose.valid = d.face_detected && d.pose_valid;
+				if (pose.valid) {
+					pose.yaw = state.yaw; pose.pitch = state.pitch; pose.roll = state.roll;
+					pose.x = state.x; pose.y = state.y; pose.z = state.z;
+				}
+				QMetaObject::invokeMethod(imu_worker, [worker = imu_worker, capture_us, pose] {
+					worker->addOptical(capture_us, pose);
+				}, Qt::QueuedConnection);
 			}
 
 			if (paint)
@@ -324,10 +363,20 @@ void Presenter::send_data(double* buffer_data)
 
 void Presenter::toggle_tracking()
 {
+	if (closing) return;
 	run = !run;
+	update_output_owner();
 	view->set_tracking_mode(run);
-	if (run)
+	if (run) {
 		run_loop();
+		// Camera errors must also relinquish Hybrid output; retain the original
+		// Webcam loop's behaviour.
+		if (state.hybrid_mode) {
+			run = false;
+			update_output_owner();
+			view->set_tracking_mode(false);
+		}
+	}
 }
 
 void Presenter::save_prefs(const ConfigData& data)
@@ -349,6 +398,7 @@ void Presenter::save_prefs(const ConfigData& data)
 	std::string ip_str = data.ip;
 	int port = data.port;
 	init_sender(ip_str, port);
+	configure_imu();
 
 	state.selected_camera = data.selected_camera;
 	state.cam_exposure = data.cam_exposure;
@@ -449,11 +499,87 @@ void Presenter::sync_ui_inputs()
 
 void Presenter::close_program()
 {
+	closing = true;
 	//Assure we stop tracking loop.
 	run = false;
 	// Assure all cameras are released (some cameras have a "recording LED" which can be annoying to have on)
 	for(std::shared_ptr<Camera> cam : all_cameras)
 		cam->stop_camera();
+	stop_imu_thread();
+}
+
+Presenter::~Presenter() { stop_imu_thread(); }
+
+void Presenter::configure_imu() {
+	if (!imu_worker) return;
+	const auto ip = QString::fromStdString(state.ip);
+	const auto calibration = QString::fromStdString(state.imu_calibration);
+	const auto port = state.port;
+	const auto strength = state.optical_strength;
+	const auto logging = state.hybrid_log;
+	QMetaObject::invokeMethod(imu_worker, [worker = imu_worker, ip, port, strength, calibration, logging] {
+		worker->configure(ip, port, strength, calibration, logging);
+	}, Qt::QueuedConnection);
+}
+
+void Presenter::update_output_owner() {
+	if (!imu_worker) return;
+	const bool active = state.hybrid_mode && run;
+	if (!active && !worker_may_send) return;
+	const auto generation = ++output_generation;
+	// Suppress camera sends immediately. Resume only after this command's ack;
+	// generations discard stale acknowledgements from rapid mode changes.
+	worker_may_send = true;
+	QMetaObject::invokeMethod(imu_worker, [worker = imu_worker, active, generation] {
+		worker->setOutputEnabled(active, generation);
+	}, Qt::QueuedConnection);
+}
+
+void Presenter::set_hybrid_mode(bool hybrid) {
+	state.hybrid_mode = hybrid;
+	conf_mgr->updateConfig(state);
+	update_output_owner();
+	if (!hybrid) connect_imu(false);
+}
+
+void Presenter::set_imu_port(const std::string& port) {
+	state.imu_port = port;
+	conf_mgr->updateConfig(state);
+	if (imu_worker) QMetaObject::invokeMethod(imu_worker, [worker = imu_worker, port] {
+		worker->setPort(QString::fromStdString(port));
+	}, Qt::QueuedConnection);
+}
+
+void Presenter::connect_imu(bool requested) {
+	if (imu_worker) QMetaObject::invokeMethod(imu_worker, [worker = imu_worker, requested] {
+		worker->requestConnection(requested);
+	}, Qt::QueuedConnection);
+}
+
+void Presenter::calibrate_imu(bool start) {
+	if (imu_worker) QMetaObject::invokeMethod(imu_worker, [worker = imu_worker, start] {
+		worker->calibrate(start);
+	}, Qt::QueuedConnection);
+}
+
+void Presenter::set_optical_strength(int strength) {
+	state.optical_strength = std::clamp(strength, 0, 100);
+	conf_mgr->updateConfig(state);
+	configure_imu();
+}
+
+void Presenter::stop_imu_thread() {
+	if (!imu_thread) return;
+	QObject::disconnect(imu_worker, nullptr, this, nullptr);
+	QMetaObject::invokeMethod(imu_worker, &hybrid_qt::ImuWorker::shutdown, Qt::QueuedConnection);
+	if (imu_thread->wait(3000)) delete imu_thread;
+	else {
+		// Never terminate a thread during serial I/O or destroy a running QThread.
+		// Shutdown remains queued and will release the port/socket on its owner.
+		logger->warn("IMU thread shutdown exceeded 3 seconds; deferred cleanup");
+		connect(imu_thread, &QThread::finished, imu_thread, &QObject::deleteLater);
+	}
+	imu_thread = nullptr; imu_worker = nullptr;
 }
 
 void Presenter::on_update_check_completed(bool update_exists)

@@ -1,6 +1,7 @@
 #include "Config.h"
 
 #include <QFileInfo>
+#include <algorithm>
 
 
 
@@ -52,6 +53,11 @@ ConfigMgr::ConfigMgr(std::string ini_path):
 
 void ConfigMgr::updateConfig(const ConfigData& data)
 {
+	conf.setValue("hybrid_mode", data.hybrid_mode);
+	conf.setValue("imu_port", QString::fromStdString(data.imu_port));
+	conf.setValue("optical_strength", std::clamp(data.optical_strength, 0, 100));
+	conf.setValue("imu_calibration", QString::fromStdString(data.imu_calibration));
+	conf.setValue("hybrid_log", data.hybrid_log);
 	conf.setValue("ip", data.ip.data());
 	conf.setValue("port", data.port);
 	conf.setValue("camera_fov", data.camera_fov);
@@ -78,12 +84,18 @@ void ConfigMgr::updateConfig(const ConfigData& data)
 	//conf.setValue("head_3d_scale_y", data.head_scale_y);
 	//conf.setValue("head_3d_scale_z", data.head_scale_z);
 	conf.setValue("tracking_shortcut_enabled", data.tracking_shortcut_enabled);
+	conf.sync();
 
 }
 
 ConfigData ConfigMgr::getConfig()
 {
 	ConfigData c = ConfigData();
+	c.hybrid_mode = conf.value("hybrid_mode", false).toBool();
+	c.imu_port = conf.value("imu_port", "Auto").toString().toStdString();
+	c.optical_strength = std::clamp(conf.value("optical_strength", 50).toInt(), 0, 100);
+	c.imu_calibration = conf.value("imu_calibration", "").toString().toStdString();
+	c.hybrid_log = conf.value("hybrid_log", false).toBool();
 	c.ip = conf.value("ip", "").toString().toStdString();
 	c.port = conf.value("port", 0).toInt();
 	c.camera_fov = conf.value("camera_fov", 56.0).toDouble();

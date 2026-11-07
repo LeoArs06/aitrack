@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Hybrid core"><UniqueIdentifier>{713ad3d3-4baa-579e-bf83-3db35eef969f}</UniqueIdentifier></Filter>
+    <Filter Include="Hybrid Qt"><UniqueIdentifier>{1e33724d-ed1f-5de3-8cbb-4c2f9147c860}</UniqueIdentifier></Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\hybrid\Calibration.cpp"><Filter>Hybrid core</Filter></ClCompile>
+    <ClCompile Include="src\hybrid\ClockSync.cpp"><Filter>Hybrid core</Filter></ClCompile>
+    <ClCompile Include="src\hybrid\HybridFusion.cpp"><Filter>Hybrid core</Filter></ClCompile>
+    <ClCompile Include="src\hybrid\ImuProtocol.cpp"><Filter>Hybrid core</Filter></ClCompile>
+    <ClCompile Include="src\hybrid\PoseConvention.cpp"><Filter>Hybrid core</Filter></ClCompile>
+    <ClCompile Include="src\hybrid\Simulator.cpp"><Filter>Hybrid core</Filter></ClCompile>
+    <ClCompile Include="src\hybrid_qt\ImuWorker.cpp"><Filter>Hybrid Qt</Filter></ClCompile>
+    <ClInclude Include="src\hybrid\Calibration.h"><Filter>Hybrid core</Filter></ClInclude>
+    <ClInclude Include="src\hybrid\ClockSync.h"><Filter>Hybrid core</Filter></ClInclude>
+    <ClInclude Include="src\hybrid\HybridFusion.h"><Filter>Hybrid core</Filter></ClInclude>
+    <ClInclude Include="src\hybrid\ImuProtocol.h"><Filter>Hybrid core</Filter></ClInclude>
+    <ClInclude Include="src\hybrid\ImuScaling.h"><Filter>Hybrid core</Filter></ClInclude>
+    <ClInclude Include="src\hybrid\PoseConvention.h"><Filter>Hybrid core</Filter></ClInclude>
+    <ClInclude Include="src\hybrid\Quat.h"><Filter>Hybrid core</Filter></ClInclude>
+    <ClInclude Include="src\hybrid\Simulator.h"><Filter>Hybrid core</Filter></ClInclude>
+    <ClInclude Include="src\hybrid_qt\HostClock.h"><Filter>Hybrid Qt</Filter></ClInclude>
+    <ClInclude Include="src\hybrid_qt\ImuPortComboBox.h"><Filter>Hybrid Qt</Filter></ClInclude>
+    <QtMoc Include="src\hybrid_qt\ImuWorker.h"><Filter>Hybrid Qt</Filter></QtMoc>
+  </ItemGroup>
+</Project>

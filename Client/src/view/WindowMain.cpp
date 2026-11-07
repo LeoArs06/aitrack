@@ -4,6 +4,8 @@
 #include "../version.h"
 #include <iostream>
 #include <QMessageBox>
+#include <QSignalBlocker>
+#include <QFontDatabase>
 
 
 WindowMain::WindowMain(QWidget *parent)
@@ -32,6 +34,28 @@ WindowMain::WindowMain(QWidget *parent)
 	connect(check_video_preview, SIGNAL(released()), this, SLOT(onSaveClick()));
 	
 	statusBar()->setSizeGripEnabled(false);
+	ui.hybridStatus->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+	auto statusFont = ui.hybridStatus->font(); statusFont.setPointSize(8);
+	ui.hybridStatus->setFont(statusFont);
+	connect(ui.hybridMode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) {
+		update_hybrid_controls();
+		if (presenter) presenter->set_hybrid_mode(index == 1);
+	});
+	connect(ui.imuPort, &QComboBox::currentTextChanged, this, [this](const QString& port) {
+		if (presenter) presenter->set_imu_port(port.toStdString());
+	});
+	connect(ui.imuConnect, &QPushButton::clicked, this, [this](bool requested) {
+		ui.imuConnect->setText(requested ? "Disconnect" : "Connect");
+		if (presenter) presenter->connect_imu(requested);
+	});
+	connect(ui.imuCalibrate, &QPushButton::clicked, this, [this] {
+		if (presenter) presenter->calibrate_imu(!imu_calibrating_);
+	});
+	connect(ui.opticalStrength, &QSlider::valueChanged, this, [this](int strength) {
+		ui.opticalValue->setText(QString::number(strength));
+		if (presenter) presenter->set_optical_strength(strength);
+	});
+	update_hybrid_controls();
 }
 
 WindowMain::~WindowMain()
@@ -75,6 +99,8 @@ void WindowMain::connect_presenter(IPresenter* presenter)
 
 void WindowMain::set_tracking_mode(bool is_tracking)
 {
+	tracking_ = is_tracking;
+	update_hybrid_controls();
 	if (is_tracking)
 	{
 		// Change button name to "stop"
@@ -121,6 +147,14 @@ ConfigData WindowMain::get_inputs()
 
 void WindowMain::set_inputs(const ConfigData data)
 {
+	const QSignalBlocker modeBlock(ui.hybridMode), portBlock(ui.imuPort), strengthBlock(ui.opticalStrength);
+	ui.hybridMode->setCurrentIndex(data.hybrid_mode ? 1 : 0);
+	const auto port = QString::fromStdString(data.imu_port);
+	if (ui.imuPort->findText(port) < 0) ui.imuPort->addItem(port);
+	ui.imuPort->setCurrentText(port);
+	ui.opticalStrength->setValue(data.optical_strength);
+	ui.opticalValue->setText(QString::number(data.optical_strength));
+	update_hybrid_controls();
 	check_video_preview->setChecked(data.show_video_feed);
 	this->conf_win->update_view_state(data);
 }
@@ -207,4 +241,23 @@ void WindowMain::set_shortcuts(bool enabled)
 IView* WindowMain::get_calibration_window()
 {
 	return conf_win->get_calibration_window();
+}
+
+void WindowMain::update_hybrid_controls() {
+	const bool hybrid = ui.hybridMode->currentIndex() == 1;
+	ui.imuControls->setEnabled(hybrid);
+	ui.imuCalibrate->setEnabled(hybrid && imu_connected_ && tracking_);
+	ui.imuCalibrate->setText(imu_calibrating_ ? "Cancel" : "Calibrate");
+}
+
+void WindowMain::set_hybrid_status(const QString& text, const QString& progress,
+	bool connected, bool requested, bool calibrating) {
+	imu_connected_ = connected; imu_calibrating_ = calibrating;
+	const QSignalBlocker blocker(ui.imuConnect);
+	ui.imuConnect->setChecked(requested);
+	ui.imuConnect->setText(requested ? "Disconnect" : "Connect");
+	const auto prefix = text.startsWith("SIM") ? QString("SIM | ") : QString();
+	ui.hybridStatus->setText(progress.isEmpty() ? text : prefix + progress + '\n' + text.section('\n', 1));
+	ui.hybridStatus->setToolTip(progress + '\n' + text);
+	update_hybrid_controls();
 }

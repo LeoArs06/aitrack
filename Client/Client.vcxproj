@@ -117,21 +117,21 @@
   </ItemDefinitionGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="QtSettings">
     <QtInstall>$(DefaultQtVersion)</QtInstall>
-    <QtModules>core;uitools;widgets;quick</QtModules>
+    <QtModules>core;uitools;widgets;quick;serialport</QtModules>
     <QtBuildConfig>debug</QtBuildConfig>
     <QtLibrarySearchPath>$(QTDIR)\lib;$(QtLibrarySearchPath)</QtLibrarySearchPath>
     <QtHeaderSearchPath>$(QTDIR)\include</QtHeaderSearchPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="QtSettings">
     <QtInstall>$(DefaultQtVersion)</QtInstall>
-    <QtModules>core;uitools;widgets;quick</QtModules>
+    <QtModules>core;uitools;widgets;quick;serialport</QtModules>
     <QtBuildConfig>release</QtBuildConfig>
     <QtHeaderSearchPath>$(QTDIR)\include</QtHeaderSearchPath>
     <QtLibrarySearchPath>$(QTDIR)\lib;$(QtLibrarySearchPath)</QtLibrarySearchPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debugg|x64'" Label="QtSettings">
     <QtInstall>$(DefaultQtVersion)</QtInstall>
-    <QtModules>core;uitools;widgets;quick</QtModules>
+    <QtModules>core;uitools;widgets;quick;serialport</QtModules>
     <QtBuildConfig>release</QtBuildConfig>
   </PropertyGroup>
   <ImportGroup Condition="Exists('$(SolutionDir)\QtMsBuild\qt.props')">
@@ -241,6 +241,31 @@
     <QtUic Include="src\view\ConfigWindow.ui" />
     <QtUic Include="src\view\HeadCalibrationWindow.ui" />
     <QtUic Include="src\view\MainWindow.ui" />
+  </ItemGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="src\hybrid\Calibration.cpp" />
+    <ClCompile Include="src\hybrid\ClockSync.cpp" />
+    <ClCompile Include="src\hybrid\HybridFusion.cpp" />
+    <ClCompile Include="src\hybrid\ImuProtocol.cpp" />
+    <ClCompile Include="src\hybrid\PoseConvention.cpp" />
+    <ClCompile Include="src\hybrid\Simulator.cpp" />
+    <ClCompile Include="src\hybrid_qt\ImuWorker.cpp" />
+    <ClInclude Include="src\hybrid\Calibration.h" />
+    <ClInclude Include="src\hybrid\ClockSync.h" />
+    <ClInclude Include="src\hybrid\HybridFusion.h" />
+    <ClInclude Include="src\hybrid\ImuProtocol.h" />
+    <ClInclude Include="src\hybrid\ImuScaling.h" />
+    <ClInclude Include="src\hybrid\PoseConvention.h" />
+    <ClInclude Include="src\hybrid\Quat.h" />
+    <ClInclude Include="src\hybrid\Simulator.h" />
+    <ClInclude Include="src\hybrid_qt\HostClock.h" />
+    <ClInclude Include="src\hybrid_qt\ImuPortComboBox.h" />
+    <QtMoc Include="src\hybrid_qt\ImuWorker.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(SolutionDir)\QtMsBuild\qt.targets')">

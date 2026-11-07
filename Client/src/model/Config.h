@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include <QSettings>
 
 
@@ -20,6 +21,11 @@ struct ConfigData
 	bool use_landmark_stab;
 	bool autocheck_updates;
 	bool tracking_shortcut_enabled;
+	bool hybrid_mode = false;
+	std::string imu_port = "Auto";
+	int optical_strength = 50;
+	std::string imu_calibration;
+	bool hybrid_log = false;
 
 	float x, y, z, yaw, pitch, roll;
 

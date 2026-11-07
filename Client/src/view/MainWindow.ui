@@ -25,7 +25,7 @@
   <property name="maximumSize">
    <size>
     <width>420</width>
-    <height>590</height>
+    <height>850</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -91,7 +91,7 @@
      </spacer>
     </item>
     <item>
-     <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0">
+     <layout class="QVBoxLayout" name="verticalLayout">
       <property name="spacing">
        <number>3</number>
       </property>
@@ -258,6 +258,42 @@
      </layout>
     </item>
     <item>
+     <widget class="QGroupBox" name="hybridGroup">
+      <property name="title"><string>Hybrid IMU</string></property>
+      <layout class="QVBoxLayout" name="hybridLayout">
+       <property name="spacing"><number>4</number></property>
+       <item><layout class="QHBoxLayout" name="hybridModeRow">
+        <item><widget class="QLabel" name="hybridModeLabel"><property name="text"><string>&amp;Mode</string></property><property name="buddy"><cstring>hybridMode</cstring></property></widget></item>
+        <item><widget class="QComboBox" name="hybridMode">
+         <item><property name="text"><string>Webcam</string></property></item>
+         <item><property name="text"><string>Hybrid IMU</string></property></item>
+        </widget></item>
+       </layout></item>
+       <item><widget class="QWidget" name="imuControls" native="true">
+        <layout class="QVBoxLayout" name="imuControlsLayout">
+         <property name="leftMargin"><number>0</number></property><property name="topMargin"><number>0</number></property>
+         <property name="rightMargin"><number>0</number></property><property name="bottomMargin"><number>0</number></property>
+         <property name="spacing"><number>4</number></property>
+         <item><layout class="QHBoxLayout" name="imuPortRow">
+          <item><widget class="QLabel" name="imuPortLabel"><property name="text"><string>&amp;Port</string></property><property name="buddy"><cstring>imuPort</cstring></property></widget></item>
+          <item><widget class="ImuPortComboBox" name="imuPort"/></item>
+          <item><widget class="QPushButton" name="imuConnect"><property name="text"><string>Connect</string></property><property name="checkable"><bool>true</bool></property></widget></item>
+          <item><widget class="QPushButton" name="imuCalibrate"><property name="text"><string>Calibrate</string></property><property name="toolTip"><string>Track with your face visible. Hold still for 2 seconds, then move all three axes for 10 seconds.</string></property></widget></item>
+         </layout></item>
+         <item><layout class="QHBoxLayout" name="opticalStrengthRow">
+          <item><widget class="QLabel" name="opticalLabel"><property name="text"><string>Optical &amp;correction</string></property><property name="buddy"><cstring>opticalStrength</cstring></property></widget></item>
+          <item><widget class="QLabel" name="opticalWeak"><property name="text"><string>weak</string></property></widget></item>
+          <item><widget class="QSlider" name="opticalStrength"><property name="maximum"><number>100</number></property><property name="value"><number>50</number></property><property name="orientation"><enum>Qt::Horizontal</enum></property></widget></item>
+          <item><widget class="QLabel" name="opticalStrong"><property name="text"><string>strong</string></property></widget></item>
+          <item><widget class="QLabel" name="opticalValue"><property name="text"><string>50</string></property><property name="minimumSize"><size><width>22</width><height>0</height></size></property></widget></item>
+         </layout></item>
+         <item><widget class="QLabel" name="hybridStatus"><property name="text"><string>Disconnected</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
+        </layout>
+       </widget></item>
+      </layout>
+     </widget>
+    </item>
+    <item>
      <spacer name="verticalSpacerBottom">
       <property name="orientation">
        <enum>Qt::Vertical</enum>
@@ -277,6 +313,9 @@
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
+ <customwidgets>
+  <customwidget><class>ImuPortComboBox</class><extends>QComboBox</extends><header>src/hybrid_qt/ImuPortComboBox.h</header></customwidget>
+ </customwidgets>
  <resources>
   <include location="../../res/Resource.qrc"/>
  </resources>
