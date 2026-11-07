@@ -90,6 +90,8 @@ void StandardTracker::predict(cv::Mat& image, FaceData& face_data, const std::un
 
         solver->solve_rotation(&face_data);
     }
+    else if (filter != nullptr)
+        filter->reset();
 }
 
 void StandardTracker::calibrate(FaceData& face_data)
@@ -118,8 +120,8 @@ float StandardTracker::get_distance_squared(float x0, float y0, float x1, float 
 int StandardTracker::get_center_weighted_faces_row(const cv::Mat& image, const cv::Mat& faces)
 {
     // get center coordinates for image
-    float image_center_x = (float)(image.rows / 2);
-    float image_center_y = (float)(image.cols / 2);
+    float image_center_x = image.cols / 2.0f;
+    float image_center_y = image.rows / 2.0f;
 
     float smallest_distance_squared = 0.0f;
     int   center_weighted_face_row  = -1;
@@ -166,7 +168,7 @@ void StandardTracker::detect_face(const cv::Mat& image, FaceData& face_data)
         int  faces_row = 0;
         bool center_weighted = true; // make center weighted face detection configurable
         if (center_weighted)
-            faces_row = get_center_weighted_faces_row(image, faces);
+            faces_row = get_center_weighted_faces_row(resized, faces);
         float x0 = faces.at<float>(faces_row, 0);
         float y0 = faces.at<float>(faces_row, 1);
         float face_w = faces.at<float>(faces_row, 2);
@@ -262,8 +264,8 @@ void StandardTracker::proc_heatmaps(float* heatmaps, int x0, int y0, float scale
         // float conf = heatmaps[offset + argmax]; unreferenced local variable
         float res = 223;
 
-        int off_x = (int)floor(res * (logit(heatmaps[66 * heatmap_size + offset + argmax])) + 0.1f);
-        int off_y = (int)floor(res * (logit(heatmaps[2 * 66 * heatmap_size + offset + argmax])) + 0.1f);
+        float off_x = res * logit(heatmaps[66 * heatmap_size + offset + argmax]) + 0.1f;
+        float off_y = res * logit(heatmaps[2 * 66 * heatmap_size + offset + argmax]) + 0.1f;
 
 
         float lm_x = (float)y0 + (float)(scale_x * (res * (float(x) / 27.0f) + off_x));

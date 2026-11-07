@@ -17,6 +17,7 @@ public:
 	int* face_coords;
 
 	bool face_detected;
+	bool pose_valid = true;
 
 	FaceData();
 

@@ -35,9 +35,10 @@ void Ps3Camera::stop_camera()
 	this->ctx.eye->stop();
 }
 
-void Ps3Camera::get_frame(uint8_t *buffer) 
+bool Ps3Camera::get_frame(uint8_t *buffer)
 {
 	this->ctx.eye->getFrame(buffer);
+	return true;
 }
 
 void Ps3Camera::set_settings(CameraSettings& settings)

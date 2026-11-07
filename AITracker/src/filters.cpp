@@ -63,8 +63,6 @@ EAFilter::EAFilter(int array_size)
 {
 	this->array_size = array_size;
 	this->last_value = new float[array_size];
-	//If the last value is not 0, the first readings could bounce
-	std::memset(last_value, 0, array_size * sizeof(float));  
 }
 
 EAFilter::~EAFilter()
@@ -72,8 +70,20 @@ EAFilter::~EAFilter()
 	delete[] this->last_value;
 }
 
+void EAFilter::reset()
+{
+	initialized = false;
+}
+
 void EAFilter::filter(float* in_array, float* out_array)
 {
+	if (!initialized)
+	{
+		for (int i = 0; i < array_size; i++)
+			out_array[i] = this->last_value[i] = in_array[i];
+		initialized = true;
+		return;
+	}
 	for (int i = 0; i < array_size; i++)
 	{
 		out_array[i] = (0.6f * in_array[i] + 0.4f * this->last_value[i]);

@@ -5,6 +5,7 @@ class IFilter
 {
 public:
 	virtual void filter(float* in_array, float* out_array)=0;
+	virtual void reset() {};
 };
 
 
@@ -32,10 +33,12 @@ class EAFilter : public IFilter
 private:
 	int array_size;
 	float* last_value;
+	bool initialized = false;
 
 public:
 	EAFilter(int array_size);
 	~EAFilter();
+	void reset() override;
 
 	void filter(float* in_array, float* out_array);
 };

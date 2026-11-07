@@ -107,7 +107,7 @@ void Presenter::init_sender(std::string &ip, int port)
 	// Updata only if needed.
 	if (this->udp_sender)
 	{
-		if (ip != this->udp_sender->ip && port != this->udp_sender->port)
+		if (ip == this->udp_sender->ip && port == this->udp_sender->port)
 			return;
 	}
 
@@ -199,7 +199,12 @@ void Presenter::run_loop()
 		while(run)
 		{
 			auto loop_start_time = std::chrono::steady_clock::now();
-			cam->get_frame(video_tex_pixels.get());
+			if (!cam->get_frame(video_tex_pixels.get()))
+			{
+				QApplication::processEvents();
+				QThread::msleep(frame_duration.count());
+				continue;
+			}
 			cv::Mat mat(cam->height, cam->width, CV_8UC3, video_tex_pixels.get());
 
 			t->predict(mat, d, this->filter);
@@ -211,8 +216,11 @@ void Presenter::run_loop()
 					paint_predictions(mat, d, color_blue, color_magenta);
 				}
 
-				update_tracking_data(d);
-				send_data(buffer_data);
+				if (d.pose_valid)
+				{
+					update_tracking_data(d);
+					send_data(buffer_data);
+				}
 			}
 
 			if (paint)
@@ -391,7 +399,12 @@ void Presenter::calibrate_face(IView& calibration_view)
 		for (int i=0; i < 10; i++)
 		{
 			auto loop_start_time = std::chrono::steady_clock::now();
-			cam->get_frame(video_tex_pixels.get());
+			if (!cam->get_frame(video_tex_pixels.get()))
+			{
+				QApplication::processEvents();
+				QThread::msleep(frame_duration.count());
+				continue;
+			}
 			cv::Mat mat(cam->height, cam->width, CV_8UC3, video_tex_pixels.get());
 
 			t->predict(mat, d, this->filter);

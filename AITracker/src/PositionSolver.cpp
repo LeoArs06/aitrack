@@ -194,7 +194,7 @@ void PositionSolver::solve_rotation(FaceData* face_data)
     cv::Mat rvec(rv, true), tvec(tv, true);
 
 
-   solvePnP(mat3dcontour,
+    if (!solvePnP(mat3dcontour,
         landmark_points_buffer,
         this->camera_matrix,
         this->camera_distortion,
@@ -202,7 +202,21 @@ void PositionSolver::solve_rotation(FaceData* face_data)
         tvec,
         !this->complex, //extrinsic guess
         cv::SOLVEPNP_ITERATIVE
-    );
+    ))
+    {
+        face_data->pose_valid = false;
+        return;
+    }
+
+    face_data->pose_valid = true;
+    if (!this->complex)
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            rv[i] = rvec.at<double>(i, 0);
+            tv[i] = tvec.at<double>(i, 0);
+        }
+    }
 
     get_euler(rvec, tvec);
 

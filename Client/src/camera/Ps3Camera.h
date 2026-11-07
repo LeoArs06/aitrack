@@ -45,7 +45,7 @@ public:
 	~Ps3Camera();
 	void start_camera();
 	void stop_camera();
-	void get_frame(uint8_t* buffer);
+	bool get_frame(uint8_t* buffer);
 	void set_settings(CameraSettings& settings);
 	CameraSettings get_settings();
 };

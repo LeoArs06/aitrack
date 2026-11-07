@@ -77,13 +77,17 @@ void OCVCamera::stop_camera()
 	cap.release();
 }
 
-void OCVCamera::get_frame(uint8_t* buffer)
+bool OCVCamera::get_frame(uint8_t* buffer)
 {
 	cv::Mat frame;
-	cap.read(frame);
+	if (!cap.read(frame) || frame.empty())
+		return false;
+	if (frame.cols != this->width || frame.rows != this->height)
+		cv::resize(frame, frame, cv::Size(this->width, this->height));
 	cv::flip(frame, frame, 1);
 	for (int i = 0; i < frame.cols * frame.rows * 3; i++)
 		buffer[i] = frame.data[i];
+	return true;
 
 }
 
