@@ -276,9 +276,12 @@ void ImuWorker::calibrate(bool start) {
 void ImuWorker::updateCalibration(int64_t now) {
     if (!connected_ || !outputEnabled_) return;
     if (auto_.update(now)) {
+        const bool first = !calibrated_;
         savedCalibration_ = auto_.result(); calibrated_ = true;
         appliedCalibration_ = QString::fromStdString(savedCalibration_.serialize());
-        resetFusion();
+        // First lock: start fused output fresh from the camera pose. Later
+        // refinements only update parameters, keeping the output continuous.
+        if (first) resetFusion(); else fusion_.setCalibration(savedCalibration_);
         emit calibrationSaved(appliedCalibration_);
         progress_ = QString("Calibrated automatically (fit %1%, camera delay %2 ms)")
             .arg(int(savedCalibration_.quality * 100)).arg(savedCalibration_.latencyMs, 0, 'f', 0);

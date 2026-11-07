@@ -77,7 +77,7 @@ int main(int argc,char** argv) {
                 std::printf("t=%5.1f s %s progress=%.2f residual=%.2f latency=%.0f bias=(%.2f %.2f %.2f) q=(%.3f %.3f %.3f %.3f)\n",(t-firstImu)*1e-6,
                     fresh?"NEW ":(autoCal.ready()?"ok  ":"learn"),autoCal.progress(),autoCal.relativeResidual(),c.latencyMs,
                     c.bias.x*degrees,c.bias.y*degrees,c.bias.z*degrees,c.imuToHead.w,c.imuToHead.x,c.imuToHead.y,c.imuToHead.z); }
-            if(fresh) { f.setCalibration(autoCal.result()); haveCal=true; }
+            if(fresh) { if(!haveCal) { f=HybridFusion{}; f.setStrength(0.5); } f.setCalibration(autoCal.result()); haveCal=true; } // as ImuWorker::updateCalibration
         }
         if(rows[i].imu) {
             int64_t t=mapped[i]; f.addImuSample(t,scale(rows[i].raw));

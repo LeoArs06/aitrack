@@ -124,7 +124,8 @@ FusionOutput HybridFusion::output(int64_t t) {
     } else out_=target;
     if(dt>0 && face) translation_+=(translationTarget_-translation_)*(1-std::exp(-dt/0.08));
     diag_.state=transition ? FusionState::Crossfading : imu ? (face ? FusionState::Hybrid : FusionState::GyroOnly) : face ? FusionState::OpticalOnly : FusionState::Waiting;
-    if(!haveImu_ && !haveOptical_) return {{},FusionState::Waiting,false};
+    // No absolute reference yet: an identity pose would snap the view to 0/0/0.
+    if(!seeded_) return {{},FusionState::Waiting,false};
     haveOutput_=true;lastOutput_=t;
     return {quaternionPose(out_,translation_),diag_.state,true};
 }
